@@ -64,12 +64,22 @@ export function ContactButtons({ m, small }: { m: any; small?: boolean }) {
   );
 }
 
+/** Mechanic photo (from the company site) with initials as the fallback. */
+export function Avatar({ m, size = 40 }: { m: any; size?: number }) {
+  const [bad, setBad] = useState(false);
+  const initials = (m.name || "?").split(/\s+/).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
+  const style = { width: size, height: size, fontSize: size * 0.4 };
+  if (m.photo_url && !bad) return <img src={m.photo_url} alt="" referrerPolicy="no-referrer" onError={() => setBad(true)} style={style} className="rounded-xl object-cover flex-none border border-line" />;
+  return <div style={style} className="rounded-xl bg-gradient-to-br from-brand-yellow to-brand-orange grid place-items-center font-display font-bold flex-none">{initials}</div>;
+}
+
 /** Compact mechanic card used beside the map and in lists. */
 export function MechanicCard({ m, extra }: { m: any; extra?: any }) {
   return (
     <div className="rounded-xl border border-line bg-white p-3 flex flex-col gap-1.5">
-      <div className="flex items-start justify-between gap-2">
-        <Link href={`/mechanic/?id=${m.id}`} className="font-bold hover:text-brand-deep">{m.name}</Link>
+      <div className="flex items-center gap-2">
+        <Avatar m={m} size={34} />
+        <Link href={`/mechanic/?id=${m.id}`} className="font-bold hover:text-brand-deep flex-1">{m.name}</Link>
         <span className="chip">{m.zone}</span>
       </div>
       <div className="text-sm grid grid-cols-[92px_1fr] gap-x-2">

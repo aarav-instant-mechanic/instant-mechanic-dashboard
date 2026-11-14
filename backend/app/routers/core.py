@@ -11,6 +11,7 @@ from ..geo import coords_from_maps_link
 from ..models import Mechanic, User, WhatsAppGroup, Zone
 from ..security import admin_user, check_password, current_user, hash_password, make_token
 from ..seed import city_region, normalize_zone_code
+from ..sync import refresh_live
 
 router = APIRouter()
 
@@ -148,6 +149,7 @@ def mechanics(city: str = "", zone: str = "", q: str = "", service: str = "", ho
               active: bool = True, db: Session = Depends(get_db), user: User = Depends(current_user)):
     if not active and user.role != "admin":
         raise HTTPException(403, "Only the Admin login can see deactivated mechanics.")
+    refresh_live(db)   # pulls the latest shared positions from the company site, at most every 90 seconds
     rows = _query(db, city, zone, q, service, hours, missing, active).order_by(Zone.city, Zone.code, Mechanic.name).all()
     return [mechanic_json(m, user.role == "admin") for m in rows]
 

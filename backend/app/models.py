@@ -74,6 +74,9 @@ class Mechanic(Base):
     notes: Mapped[str] = mapped_column(Text, default="")
     review_flags: Mapped[str] = mapped_column(Text, default="")       # comma separated, cleared by admin
     source_row: Mapped[str] = mapped_column(String(20), default="", index=True)
+    external_id: Mapped[str] = mapped_column(String(40), default="", index=True)   # ID on instantmechanic.online
+    photo_url: Mapped[str] = mapped_column(String(500), default="")
+    live_place: Mapped[str] = mapped_column(String(300), default="")               # address of the last shared position
     active: Mapped[bool] = mapped_column(Boolean, default=True, index=True)
     # live location sharing
     track_token: Mapped[str] = mapped_column(String(40), default="", index=True)

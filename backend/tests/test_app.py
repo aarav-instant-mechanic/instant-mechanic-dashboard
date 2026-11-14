@@ -6,7 +6,8 @@ from pathlib import Path
 _tmp = tempfile.mkdtemp()
 os.environ["DATABASE_URL"] = f"sqlite:///{_tmp}/test.db"
 os.environ.update(ADMIN_EMAIL="admin@test.local", ADMIN_PASSWORD="admin-pass-1",
-                  AGENT_EMAIL="agents@test.local", AGENT_PASSWORD="agent-pass-1", SECRET_KEY="test-secret")
+                  AGENT_EMAIL="agents@test.local", AGENT_PASSWORD="agent-pass-1", LIVE_SYNC="off",
+                  SECRET_KEY="test-secret-that-is-long-enough-for-the-check")
 
 from fastapi.testclient import TestClient  # noqa: E402
 from app.main import app  # noqa: E402
@@ -170,3 +171,53 @@ def test_helpers():
     assert coords_from_text("https://maps.google.com/?q=28.5,77.1") == (28.5, 77.1)
     assert coords_from_text("28.45, 77.02") == (28.45, 77.02)
     assert point_in_polygon(1, 1, [[0, 0], [0, 2], [2, 2], [2, 0]]) and not point_in_polygon(3, 1, [[0, 0], [0, 2], [2, 2], [2, 0]])
+
+
+SITE_ROWS = [
+    {"id": 1, "name": "Old One", "mobile": "9000000010", "location": "G - 4", "city": "Gurugram", "is_deleted": True},
+    {"id": 2, "name": "Maninder Test", "mobile": "9000000011", "location": "Testing", "city": "Testing", "is_deleted": False},
+    {"id": 3, "name": "Far Away Ji", "mobile": "9000000012", "location": "Bangalore", "city": "", "is_deleted": False},
+    # same Google Maps name and zone as "Test Mechanic Two" from the CSV -> should link, not duplicate
+    {"id": 4, "name": "Two Ji Gurugram", "mobile": "9000000013", "location": "G - 4", "city": "Gurugram", "is_deleted": False,
+     "lat": 28.44, "lng": 77.05, "location_name": "Somewhere in Gurugram", "google_name": "Test Garage Two",
+     "photo_url": "https://example.com/p.jpg", "last_updated": "2026-11-14T06:00:00Z", "location_id": 9},
+    {"id": 4, "name": "Two Ji Gurugram", "mobile": "9000000013", "location": "G - 4", "city": "Gurugram", "is_deleted": False,
+     "lat": 28.45, "lng": 77.06, "location_name": "Newer place", "google_name": "Test Garage Two",
+     "photo_url": "https://example.com/p2.jpg", "last_updated": "2026-11-14T07:00:00Z", "location_id": 10},
+    {"id": 5, "name": "Brand New Ji Noida", "mobile": "9000000014", "location": "N -4", "city": "Noida", "is_deleted": False,
+     "lat": None, "lng": None, "google_name": None, "photo_url": None, "last_updated": None},
+    {"id": None, "name": None, "google_name": "Nobody", "is_deleted": None, "lat": 28.5, "lng": 77.1,
+     "last_updated": "2026-11-14T07:00:00Z"},
+]
+
+
+def test_site_sync(monkeypatch):
+    from app import sync as site
+    monkeypatch.setattr(site, "fetch_rows", lambda timeout=20: SITE_ROWS)
+    with TestClient(app) as c:
+        admin = {"Authorization": "Bearer " + c.post("/auth/login", json={"email": "admin@test.local", "password": "admin-pass-1"}).json()["token"]}
+        agent = {"Authorization": "Bearer " + c.post("/auth/login", json={"email": "agents@test.local", "password": "new-agent-pass"}).json()["token"]}
+        before = len(c.get("/mechanics", headers=admin).json())
+        assert c.post("/sync", headers=agent).status_code == 403
+        prev = c.post("/sync", headers=admin).json()
+        assert prev["counts"]["new"] == 1 and prev["counts"]["linked"] == 1 and prev["counts"]["skipped_no_zone"] == 1
+        assert prev["skipped"]["test record"] == 1 and prev["skipped"]["deleted on the site"] == 1
+        assert prev["linked"][0]["matched_by"] == "Google Maps name" and prev["linked"][0]["dashboard_name"] == "Test Mechanic Two"
+        assert len(c.get("/mechanics", headers=admin).json()) == before          # preview saved nothing
+        done = c.post("/sync?commit=true", headers=admin).json()
+        assert done["committed"]
+        mechs = c.get("/mechanics", headers=admin).json()
+        assert len(mechs) == before + 1
+        two = next(m for m in mechs if m["gmaps_name"] == "Test Garage Two")
+        assert two["site_id"] == "4" and two["photo_url"].endswith("p2.jpg") and two["live_place"] == "Newer place"
+        assert two["position"]["live"]["lat"] == 28.45                            # the newer of the two shared locations
+        assert two["phone"] == "9000000013" and two["name"] == "Test Mechanic Two"   # blank phone filled, name kept
+        new = next(m for m in mechs if m["name"] == "Brand New Ji Noida")
+        assert new["zone"] == "N-4" and new["phone"] == "9000000014" and new["position"]["kind"] == "approximate"
+        again = c.post("/sync", headers=admin).json()
+        assert again["counts"]["new"] == 0 and again["counts"]["linked"] == 0 and again["counts"]["unchanged"] == 2
+        # the site later marks #5 as deleted -> the dashboard deactivates him on the next confirmed sync
+        SITE_ROWS[5]["is_deleted"] = True
+        assert c.post("/sync", headers=admin).json()["counts"]["deactivate"] == 1
+        c.post("/sync?commit=true", headers=admin)
+        assert len(c.get("/mechanics", headers=admin).json()) == before

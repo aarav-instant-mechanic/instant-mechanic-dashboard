@@ -6,7 +6,7 @@ import Map from "@/components/Map";
 import { Empty, ErrorBox, Notice, Skeleton, useLoad } from "@/components/ui";
 import { API, FLAG_TEXT, api, isAdmin, param, session, when } from "@/lib/api";
 
-const TABS = [["review", "To confirm"], ["import", "CSV upload"], ["zones", "Zones"], ["removed", "Deactivated"], ["quiz", "Quiz scores"], ["history", "Change history"], ["logins", "Logins"]];
+const TABS = [["review", "To confirm"], ["sync", "Sync from site"], ["import", "CSV upload"], ["zones", "Zones"], ["removed", "Deactivated"], ["quiz", "Quiz scores"], ["history", "Change history"], ["logins", "Logins"]];
 
 function Review() {
   const { data, error, loading, reload } = useLoad("/review");
@@ -71,6 +71,44 @@ function Import() {
           {!res.committed && (res.counts.new + res.counts.updates > 0) && <button className="btn btn-primary self-start" disabled={busy} onClick={() => send(true)}>Confirm and save {res.counts.new + res.counts.updates} rows</button>}
           {!res.committed && res.counts.new + res.counts.updates === 0 && <Notice text="Nothing to save. The file matches what is already in the dashboard." />}
           {res.committed && <Notice text="Saved. Check the To confirm tab for any rows that need a look." />}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SiteSync() {
+  const [res, setRes] = useState<any>(null);
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+  const run = async (commit: boolean) => { setBusy(true); setErr(""); try { setRes(await api(`/sync?commit=${commit}`, { method: "POST" })); } catch (e: any) { setErr(e.message); } setBusy(false); };
+  const noZone = res?.skipped["outside Delhi NCR or no zone code"] || [];
+  const todo = res ? res.counts.new + res.counts.linked + res.counts.updates + res.counts.deactivate : 0;
+  return (
+    <div className="flex flex-col gap-5">
+      <div className="card flex flex-col gap-3"><h2>Sync from instantmechanic.online</h2>
+        <ul className="list-disc pl-5 text-sm flex flex-col gap-1">
+          <li>Reads the mechanic list from your company site: name, phone, zone, Google name, photo and shared location.</li>
+          <li>A mechanic already in the dashboard is <b>linked</b>, not added twice. The site only fills his blank fields; it never overwrites what you typed here.</li>
+          <li>Mechanics deleted on the site are deactivated here. Test records and records without a Delhi NCR zone code are skipped.</li>
+          <li>After the first sync, shared locations refresh by themselves whenever the map or mechanic list is opened.</li>
+        </ul>
+        <div><button className="btn btn-primary" disabled={busy} onClick={() => run(false)}>{busy ? "Reading the site…" : "Preview sync"}</button></div>
+        <ErrorBox text={err} />
+      </div>
+      {res && (
+        <div className="card flex flex-col gap-3">
+          <h2>{res.committed ? "Sync saved" : "Preview: nothing saved yet"}</h2>
+          <div className="flex gap-2 flex-wrap"><span className="chip">{res.site_records} records on the site</span><span className="chip chip-ok">{res.counts.new} new</span><span className="chip chip-ok">{res.counts.linked} linked to existing</span><span className="chip">{res.counts.updates} updates</span><span className={`chip ${res.counts.deactivate ? "chip-alert" : ""}`}>{res.counts.deactivate} to deactivate</span><span className="chip">{res.counts.unchanged} unchanged</span><span className="chip">{res.with_shared_location} share a location</span></div>
+          <div className="flex gap-2 flex-wrap"><span className="chip">{res.skipped["deleted on the site"]} deleted on the site, skipped</span><span className="chip">{res.skipped["test record"]} test records, skipped</span><span className={`chip ${noZone.length ? "chip-warn" : ""}`}>{noZone.length} without an NCR zone code, skipped</span>{res.new_zones.length > 0 && <span className="chip chip-warn">New zones: {res.new_zones.join(", ")}</span>}</div>
+          {res.linked.length > 0 && <div><h3>Linked to mechanics already in the dashboard (check these)</h3><div className="max-h-60 overflow-auto text-sm">{res.linked.map((l: any, i: number) => <div key={i} className="border-t border-line py-1">Site #{l.site_id} <b>{l.site_name}</b> → dashboard <b>{l.dashboard_name}</b> <span className="chip">{l.zone}</span> <span className="chip">matched by {l.matched_by}</span></div>)}</div></div>}
+          {res.new.length > 0 && <div><h3>New mechanics</h3><div className="max-h-60 overflow-auto text-sm">{res.new.map((n: any, i: number) => <div key={i} className="border-t border-line py-1">Site #{n.site_id} <b>{n.name}</b> <span className="chip">{n.zone}</span>{n.gmaps_name && <span className="chip ml-1">Maps: {n.gmaps_name}</span>}</div>)}</div></div>}
+          {res.updates.length > 0 && <div><h3>Updates</h3><div className="max-h-48 overflow-auto text-sm">{res.updates.map((u: any, i: number) => <div key={i} className="border-t border-line py-1"><b>{u.name}</b> {Object.entries(u.changes).map(([k, v]: any) => <span key={k} className="chip mr-1">{k}: {String(v[0] || "empty")} → {String(v[1])}</span>)}</div>)}</div></div>}
+          {res.deactivate.length > 0 && <div><h3>Will be deactivated (deleted on the site)</h3><div className="text-sm">{res.deactivate.map((d: any, i: number) => <span key={i} className="chip chip-alert mr-1">{d.name}</span>)}</div></div>}
+          {noZone.length > 0 && <div><h3>Skipped: no Delhi NCR zone code</h3><p className="muted">Give these a zone code (like G-4) on the site, then sync again. Or add them by hand.</p><div className="max-h-48 overflow-auto text-sm">{noZone.map((n: any, i: number) => <div key={i} className="border-t border-line py-1">Site #{n.site_id} <b>{n.name}</b> <span className="text-muted">location: {n.location || "empty"}{n.city ? `, ${n.city}` : ""}</span></div>)}</div></div>}
+          {!res.committed && todo > 0 && <button className="btn btn-primary self-start" disabled={busy} onClick={() => run(true)}>Confirm and save</button>}
+          {!res.committed && todo === 0 && <Notice text="Nothing to save. The dashboard already matches the site." />}
+          {res.committed && <Notice text="Saved. Open Live Map to see shared locations, and Manage > To confirm for possible duplicates." />}
         </div>
       )}
     </div>
@@ -168,7 +206,7 @@ export default function Manage() {
   return (
     <Shell title="Manage" wide>
       <div className="flex gap-2 flex-wrap">{TABS.map(([k, label]) => <button key={k} className={`pill ${tab === k ? "pill-on" : ""}`} onClick={() => setTab(k)}>{label}</button>)}<Link className="btn btn-primary text-sm ml-auto" href="/mechanic/edit/">Add mechanic</Link></div>
-      {ready && tab === "review" && <Review />}{tab === "import" && <Import />}{tab === "zones" && <ZonesTab />}{tab === "removed" && <Removed />}{tab === "quiz" && <QuizScores />}{tab === "history" && <History />}{tab === "logins" && <Logins />}
+      {ready && tab === "review" && <Review />}{tab === "sync" && <SiteSync />}{tab === "import" && <Import />}{tab === "zones" && <ZonesTab />}{tab === "removed" && <Removed />}{tab === "quiz" && <QuizScores />}{tab === "history" && <History />}{tab === "logins" && <Logins />}
     </Shell>
   );
 }

@@ -57,6 +57,7 @@ def mechanic_json(m: Mechanic, admin: bool = False) -> dict:
         "service_type": m.service_type, "garage_name": m.garage_name, "notes": m.notes,
         "groups": [{"id": g.id, "name": g.name, "link": g.link} for g in m.groups],
         "active": m.active, "position": position(m), "share_enabled": m.share_enabled,
+        "photo_url": m.photo_url, "live_place": m.live_place if m.share_enabled else "", "site_id": m.external_id,
         "updated_at": _aware(m.updated_at).isoformat() if m.updated_at else None,
     }
     if admin:

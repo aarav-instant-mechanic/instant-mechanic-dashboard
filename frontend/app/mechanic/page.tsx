@@ -3,7 +3,7 @@ import Link from "next/link";
 import { useEffect, useState } from "react";
 import Shell from "@/components/Shell";
 import Map from "@/components/Map";
-import { Blank, ContactButtons, ErrorBox, Notice, PositionChip, Skeleton, useLoad } from "@/components/ui";
+import { Avatar, Blank, ContactButtons, ErrorBox, Notice, PositionChip, Skeleton, useLoad } from "@/components/ui";
 import { API, FLAG_TEXT, api, isAdmin, param, when } from "@/lib/api";
 
 const Row = ({ k, children }: any) => (<><dt className="text-muted">{k}</dt><dd>{children}</dd></>);
@@ -22,7 +22,6 @@ export default function Profile() {
 
   if (loading || !id) return <Shell title="Mechanic"><Skeleton rows={6} /></Shell>;
   if (!m) return <Shell title="Mechanic"><ErrorBox text={error || "Mechanic not found."} /></Shell>;
-  const initials = m.name.split(/\s+/).map((w: string) => w[0]).slice(0, 2).join("").toUpperCase();
   const pos = m.position;
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/share/?t=${m.track_token}` : "";
 
@@ -31,10 +30,10 @@ export default function Profile() {
       <ErrorBox text={err} /><Notice text={msg} />
       {!m.active && <div className="rounded-xl border border-red-200 bg-red-50 text-alert px-4 py-3 font-medium">This mechanic is deactivated. Agents cannot see him.</div>}
       <div className="card flex gap-4 flex-wrap items-center">
-        <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-brand-yellow to-brand-orange grid place-items-center font-display font-bold text-2xl">{initials}</div>
+        <Avatar m={m} size={72} />
         <div className="flex-1 min-w-[220px]">
           <h1>{m.name}</h1>
-          <div className="flex gap-2 flex-wrap mt-1 items-center"><span className="chip">{m.code}</span><Link className="chip" href={`/zones/?zone=${m.zone}`}>{m.zone} · {m.zone_name}</Link><span className="chip">{m.region}</span>{m.service_type && <span className="chip">{m.service_type}</span>}<PositionChip p={pos} /></div>
+          <div className="flex gap-2 flex-wrap mt-1 items-center"><span className="chip">{m.code}</span>{m.site_id && <span className="chip">Site ID #{m.site_id}</span>}<Link className="chip" href={`/zones/?zone=${m.zone}`}>{m.zone} · {m.zone_name}</Link><span className="chip">{m.region}</span>{m.service_type && <span className="chip">{m.service_type}</span>}<PositionChip p={pos} /></div>
         </div>
         <div className="flex flex-col gap-2 items-end"><ContactButtons m={m} />{admin && <Link className="btn btn-primary text-sm" href={`/mechanic/edit/?id=${m.id}`}>Edit details</Link>}</div>
       </div>
@@ -64,6 +63,7 @@ export default function Profile() {
           {pos.kind === "approximate" && <p className="text-sm rounded-xl bg-amber-50 border border-amber-200 p-2 text-amber-800">Approximate. His exact location is not set, so the marker sits near the centre of {m.zone}.</p>}
           {pos.lat != null ? <Map zones={[]} mechanics={[m]} radiusFor={m} focus={[pos.lat, pos.lng, ["exact", "live"].includes(pos.kind) ? 11 : 13]} height="320px" /> : <p className="muted">No location yet.</p>}
           {["exact", "live"].includes(pos.kind) && <p className="muted">The dashed circle is his {m.radius_km} km service radius.</p>}
+          {pos.live && <p className="text-sm"><b>{pos.live.fresh ? "Sharing now" : "Last shared"}:</b> {m.live_place || "place name not available"} · {when(pos.live.at)}. This is where his phone was, not a fixed address.</p>}
         </div>
       </div>
 

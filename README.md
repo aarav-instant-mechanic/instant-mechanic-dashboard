@@ -107,7 +107,32 @@ Then open the static site address, sign in as Admin, and upload the mechanics CS
 
 The free Render backend sleeps after 15 minutes without requests; the first page after that takes about a minute.
 
-## 5. Live GPS
+## 5. Sync from instantmechanic.online
+
+The company site already lists mechanics with their phone, zone code, Google name, photo and shared Google
+location. The dashboard can read that list directly.
+
+1. Sign in as Admin and open **Manage > Sync from site**.
+2. Press **Preview sync**. Nothing is saved yet. Check the lists, especially "Linked to mechanics already in
+   the dashboard".
+3. Press **Confirm and save**.
+
+What it does:
+
+- A site record is linked to an existing mechanic by site ID, then phone, then Google Maps name (same zone),
+  then name (same zone). Otherwise it is added as new. Check **Manage > To confirm** afterwards for duplicates.
+- For a linked mechanic the site only fills blank fields. Photo and shared location always follow the site.
+- Deleted records on the site deactivate the mechanic here. Test records are skipped.
+- Records with no Delhi NCR zone code (for example "Delhi", "Gurgaon", "Bangalore", or empty) are skipped and
+  listed. Give them a zone code on the site and sync again.
+- After the first sync, shared locations refresh by themselves (at most every 90 seconds) whenever the map or
+  the mechanic list is opened. A shared location is where the phone last was, not a fixed address, so it shows
+  as **Live** (updated in the last 10 minutes) or **Last seen**.
+
+Settings (optional, in `backend/.env`): `MECHANIC_SOURCE_URL` to use a different address,
+`MECHANIC_SOURCE_TOKEN` if the site later needs a key, `LIVE_SYNC=off` to stop the automatic refresh.
+
+## 5b. Live GPS without the site
 
 Open a mechanic's profile as Admin and tick **Mechanic has agreed to share his location**. Then either:
 
@@ -126,6 +151,7 @@ last position.
 | Add a mechanic | Mechanics > Add mechanic |
 | Edit phone, names, hours, groups, location, radius | Profile > Edit details |
 | Remove or restore a mechanic | Profile > Deactivate, or Manage > Deactivated > Restore |
+| Bring in changes from the company site | Manage > Sync from site |
 | Many updates at once | Manage > CSV upload > Download current list, edit in Excel, upload |
 | WhatsApp groups | WhatsApp Groups > Add group, then link mechanics on their Edit page |
 | Zone name, areas, centre, boundary | Manage > Zones |
@@ -148,7 +174,10 @@ last position.
   paste the long link from the browser address bar or drag the pin.
 - A mechanic belongs to **one zone**; extra areas go in "Other areas he covers".
 - The sheet's shift tabs are not imported; working hours come from the directory tab.
-- Not included: bookings, dispatch, customer portal, Google sign-in, dark mode, profile photos.
+- The site sync was tested with made-up records and with a copy of the site's list, but not against the live
+  site address from a running backend. Use Preview first.
+- Photos come from the site sync only; there is no photo upload.
+- Not included: bookings, dispatch, customer portal, Google sign-in, dark mode.
 
 ## 8. Differences from the original master prompt
 

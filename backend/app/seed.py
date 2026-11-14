@@ -90,6 +90,10 @@ def seed_zones(db: Session) -> int:
 def seed_logins(db: Session) -> list[str]:
     """Creates the Admin and Agent logins from the .env values, only if they do not exist yet."""
     made = []
+    a, b = os.getenv("ADMIN_EMAIL", "").strip().lower(), os.getenv("AGENT_EMAIL", "").strip().lower()
+    if a and a == b:
+        raise RuntimeError("ADMIN_EMAIL and AGENT_EMAIL in backend/.env are the same. Use two different emails, "
+                           "save the file, and start the backend again.")
     for role in ("admin", "agent"):
         email = os.getenv(f"{role.upper()}_EMAIL", "").strip().lower()
         password = os.getenv(f"{role.upper()}_PASSWORD", "")
