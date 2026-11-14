@@ -1,0 +1,2 @@
+{ "name": "Instant Mechanic Dashboard", "short_name": "IM Dashboard", "start_url": "/", "display": "standalone",
+  "background_color": "#FFF9EF", "theme_color": "#FF7900", "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }] }

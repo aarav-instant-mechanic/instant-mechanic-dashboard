@@ -1,0 +1,33 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+html, body { height: 100%; }
+body { @apply bg-canvas text-ink font-sans text-[15px] leading-relaxed; }
+h1, h2, h3 { @apply font-display font-bold leading-tight; text-wrap: balance; }
+h1 { @apply text-[28px]; } h2 { @apply text-xl; } h3 { @apply text-base; }
+:focus-visible { outline: 3px solid #FF7900; outline-offset: 2px; }
+
+@layer components {
+  .card { @apply bg-white border border-line rounded-2xl p-5 shadow-card; }
+  .btn { @apply inline-flex items-center justify-center gap-2 rounded-xl px-4 py-2 font-semibold border border-line bg-white hover:bg-canvas transition disabled:opacity-50 disabled:cursor-not-allowed; }
+  .btn-primary { @apply bg-brand-orange border-brand-orange text-ink hover:bg-brand-yellow hover:border-brand-yellow; }
+  .btn-danger { @apply text-alert border-red-200 hover:bg-red-50; }
+  .input { @apply w-full rounded-xl border border-line bg-white px-3 py-2 outline-none focus:border-brand-orange; }
+  .label { @apply block text-sm font-semibold mb-1; }
+  .chip { @apply inline-flex items-center gap-1 rounded-md border border-line bg-canvas px-2 py-0.5 text-xs font-semibold whitespace-nowrap; }
+  .chip-ok { @apply bg-okbg border-green-200 text-ok; }
+  .chip-warn { @apply bg-amber-50 border-amber-200 text-amber-800; }
+  .chip-alert { @apply bg-red-50 border-red-200 text-alert; }
+  .pill { @apply rounded-full border border-line bg-white px-3 py-1 text-sm font-semibold hover:border-brand-orange; }
+  .pill-on { @apply bg-brand-orange border-brand-orange; }
+  .th { @apply text-left text-xs uppercase tracking-wide text-muted font-semibold bg-canvas px-3 py-2 sticky top-0; }
+  .td { @apply px-3 py-2 border-t border-line align-top; }
+  .muted { @apply text-muted text-sm; }
+}
+
+.leaflet-container { font-family: inherit; border-radius: 14px; z-index: 0; }
+.leaflet-tooltip.zone-label { background: #202124; color: #fff; border: 0; border-radius: 6px; padding: 0 5px; font-weight: 700; font-size: 11px; line-height: 16px; box-shadow: none; }
+.leaflet-tooltip.zone-label::before { display: none; }
+@media print { .no-print { display: none !important; } body { background: #fff; } .card { box-shadow: none; break-inside: avoid; } }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; animation: none !important; } }

@@ -1,0 +1,17 @@
+# secrets and private data: never push these
+.env
+*.env
+!.env.example
+data/*.csv
+!data/mechanics_template.csv
+*.db
+
+# build output and installed packages
+node_modules/
+.next/
+out/
+next-env.d.ts
+__pycache__/
+.venv/
+.pytest_cache/
+.env.local
