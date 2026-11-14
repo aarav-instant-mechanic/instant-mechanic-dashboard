@@ -13,7 +13,7 @@ Two logins only: a shared **Agent** login (view and training) and an **Admin** l
 
 ## 1. Run it on your PC (Windows PowerShell)
 
-You need Git, Node.js LTS and Python 3.12 or newer. See the Setup page of the roadmap.
+You need Git, Node.js 20.9 or newer (the LTS version) and Python 3.12 or newer. See the Setup page of the roadmap.
 
 **Step 1. Settings file.** In VS Code, copy `backend/.env.example` to `backend/.env` and fill in:
 
