@@ -7,7 +7,8 @@ WhatsApp groups, exact and live locations, and quizzes. No bookings or dispatch.
 - **backend/** Python FastAPI with SQLAlchemy. Works with a local file database or with Neon (PostgreSQL).
 - **data/** where you keep your own `mechanics.csv`. It is never pushed to GitHub.
 
-Two logins only: a shared **Agent** login (view and training) and an **Admin** login (add, edit, remove).
+Logins: any number of **Admin** logins (add, edit, remove) and **Agent** logins (view and training). The first
+Admin and Agent come from `backend/.env`; add more in **Manage > Users**.
 
 ---
 
@@ -57,6 +58,8 @@ cd backend
 python -m app.scripts.import_mechanics ..\data\mechanics.csv --preview
 python -m app.scripts.import_mechanics ..\data\mechanics.csv --commit
 ```
+
+Locked out? `python -m app.scripts.create_logins` adds a login or resets a password from the terminal.
 
 **Next time** you only need: Terminal 1 `cd backend; .\.venv\Scripts\Activate.ps1; uvicorn app.main:app --reload`
 and Terminal 2 `cd frontend; npm run dev`.
@@ -157,7 +160,22 @@ last position.
 | Zone name, areas, centre, boundary | Manage > Zones |
 | Quiz scores | Manage > Quiz scores |
 | Who changed what | Manage > Change history |
-| Change a password | Manage > Logins |
+| Add or remove an Admin or Agent login | Manage > Users |
+| Reset someone's password | Manage > Users > Reset password |
+| Change your own password | Click your name at the top right |
+| Give every mechanic his IM<> WhatsApp group | WhatsApp Groups > Create IM<> groups for everyone |
+| Copy a mechanic's details for WhatsApp | Profile > Copy summary |
+
+## 6b. WhatsApp groups
+
+Each mechanic's group is named `IM<>NAME_AREA`, for example `IM<>MAZID_SOUTH DELHI`. The dashboard suggests
+this name from the mechanic's name (dropping "Ji", phone numbers and city words) and his zone's region.
+**WhatsApp Groups > Create IM<> groups for everyone** records the name for every mechanic who has none.
+This only stores the name in the dashboard; WhatsApp itself is not touched. Add each group's invite link on
+its page (in WhatsApp: group info > Invite via link > Copy link).
+
+The dashboard cannot read members or names from WhatsApp groups. WhatsApp offers no way for other apps to do
+that for ordinary groups.
 
 ## 7. What is approximate or not finished
 

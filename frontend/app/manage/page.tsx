@@ -6,7 +6,7 @@ import Map from "@/components/Map";
 import { Empty, ErrorBox, Notice, Skeleton, useLoad } from "@/components/ui";
 import { API, FLAG_TEXT, api, isAdmin, param, session, when } from "@/lib/api";
 
-const TABS = [["review", "To confirm"], ["sync", "Sync from site"], ["import", "CSV upload"], ["zones", "Zones"], ["removed", "Deactivated"], ["quiz", "Quiz scores"], ["history", "Change history"], ["logins", "Logins"]];
+const TABS = [["review", "To confirm"], ["sync", "Sync from site"], ["import", "CSV upload"], ["zones", "Zones"], ["removed", "Deactivated"], ["quiz", "Quiz scores"], ["history", "Change history"], ["users", "Users"]];
 
 function Review() {
   const { data, error, loading, reload } = useLoad("/review");
@@ -184,16 +184,46 @@ function History() {
     {data?.length > 0 && <table className="w-full text-sm min-w-[760px]"><thead><tr>{["When", "Who", "Action", "On", "Details"].map((h) => <th key={h} className="th">{h}</th>)}</tr></thead><tbody>{data.map((r: any) => <tr key={r.id}><td className="td whitespace-nowrap">{when(r.at)}</td><td className="td">{r.user}</td><td className="td"><span className="chip">{r.action.replace(/_/g, " ")}</span></td><td className="td">{r.entity.replace(/_/g, " ")}: {r.label}</td><td className="td text-muted break-words max-w-md">{detail(r.detail)}</td></tr>)}</tbody></table>}</div>);
 }
 
-function Logins() {
-  const [role, setRole] = useState("agent"); const [pw, setPw] = useState(""); const [msg, setMsg] = useState(""); const [err, setErr] = useState("");
-  const save = async (e: any) => { e.preventDefault(); setErr(""); setMsg(""); try { await api("/auth/password", { json: { role, password: pw } }); setPw(""); setMsg(`The ${role === "agent" ? "Agent" : "Admin"} password is changed. Tell the people who need it.`); } catch (x: any) { setErr(x.message); } };
+function Users() {
+  const { data, error, loading, reload } = useLoad("/users");
+  const empty = { login: "", name: "", password: "", role: "agent" };
+  const [form, setForm] = useState<any>(empty);
+  const [reset, setReset] = useState<any>(null);       // {id, login, password}
+  const [remove, setRemove] = useState<any>(null);
+  const [msg, setMsg] = useState(""); const [err, setErr] = useState("");
+  const run = async (fn: () => Promise<any>, done: string) => { setErr(""); setMsg(""); try { await fn(); setMsg(done); reload(); return true; } catch (e: any) { setErr(e.message); return false; } };
+  const add = async (e: any) => { e.preventDefault(); if (await run(() => api("/users", { json: form }), `Login ${form.login} added as ${form.role === "admin" ? "Admin" : "Agent"}. Share the login and password with them privately.`)) setForm(empty); };
+  if (loading) return <Skeleton />;
   return (
-    <div className="grid gap-5 md:grid-cols-2">
-      <form onSubmit={save} className="card flex flex-col gap-3"><h2>Change a password</h2><p className="muted">Change the Agent password whenever someone leaves the team.</p>
-        <div><label className="label" htmlFor="l-role">Login</label><select id="l-role" className="input" value={role} onChange={(e) => setRole(e.target.value)}><option value="agent">Shared Agent login</option><option value="admin">Admin login</option></select></div>
-        <div><label className="label" htmlFor="l-pw">New password (at least 8 characters)</label><input id="l-pw" type="password" minLength={8} required autoComplete="new-password" className="input" value={pw} onChange={(e) => setPw(e.target.value)} /></div>
-        <ErrorBox text={err} /><Notice text={msg} /><button className="btn btn-primary self-start">Change password</button></form>
-      <div className="card"><h2 className="mb-2">The two logins</h2><ul className="list-disc pl-5 text-sm flex flex-col gap-1"><li><b>Agent login:</b> shared by the team. Can view the map, mechanics, groups and training. Cannot change anything.</li><li><b>Admin login:</b> yours. Can add, edit, deactivate, upload, export and see quiz scores.</li><li>The login emails are set in the server settings (ADMIN_EMAIL and AGENT_EMAIL).</li></ul></div>
+    <div className="flex flex-col gap-5">
+      <ErrorBox text={err || error} /><Notice text={msg} />
+      <div className="grid gap-5 lg:grid-cols-[1fr_380px]">
+        <div className="card !p-0 overflow-auto">
+          <h2 className="p-5 pb-2">Logins ({data?.length || 0})</h2>
+          <table className="w-full text-sm min-w-[560px]">
+            <thead><tr>{["Name", "Email or username", "Role", ""].map((h) => <th key={h} className="th">{h}</th>)}</tr></thead>
+            <tbody>{data?.map((u: any) => (
+              <tr key={u.id}>
+                <td className="td font-semibold">{u.name || "—"}{u.is_me && <span className="chip ml-2">You</span>}</td>
+                <td className="td">{u.login}</td>
+                <td className="td"><select aria-label={`Role of ${u.login}`} className="input !w-auto !py-1" value={u.role} disabled={u.is_me} onChange={(e) => run(() => api(`/users/${u.id}`, { method: "PUT", json: { role: e.target.value } }), `${u.login} is now ${e.target.value === "admin" ? "an Admin" : "an Agent"}.`)}><option value="agent">Agent</option><option value="admin">Admin</option></select></td>
+                <td className="td whitespace-nowrap"><button className="btn text-xs" onClick={() => setReset({ id: u.id, login: u.login, password: "" })}>Reset password</button>{!u.is_me && <button className="btn btn-danger text-xs ml-2" onClick={() => setRemove(u)}>Remove</button>}</td>
+              </tr>))}</tbody>
+          </table>
+          {reset && <form className="m-5 rounded-xl border border-brand-orange p-3 flex gap-2 flex-wrap items-end" onSubmit={async (e) => { e.preventDefault(); if (await run(() => api(`/users/${reset.id}`, { method: "PUT", json: { password: reset.password } }), `Password reset for ${reset.login}. They are signed out everywhere.`)) setReset(null); }}>
+            <div className="flex-1 min-w-[200px]"><label className="label" htmlFor="rp">New password for {reset.login}</label><input id="rp" type="password" minLength={8} required autoComplete="new-password" className="input" value={reset.password} onChange={(e) => setReset({ ...reset, password: e.target.value })} /></div>
+            <button className="btn btn-primary">Save password</button><button type="button" className="btn" onClick={() => setReset(null)}>Cancel</button></form>}
+          {remove && <div className="m-5 rounded-xl border border-red-200 bg-red-50 p-3"><p className="text-sm">Remove the login <b>{remove.login}</b>? They will be signed out and cannot sign in again.</p><div className="flex gap-2 mt-2"><button className="btn btn-danger text-sm" onClick={async () => { if (await run(() => api(`/users/${remove.id}`, { method: "DELETE" }), `Login ${remove.login} removed.`)) setRemove(null); }}>Yes, remove</button><button className="btn text-sm" onClick={() => setRemove(null)}>Cancel</button></div></div>}
+        </div>
+        <form onSubmit={add} className="card flex flex-col gap-3 self-start"><h2>Add a login</h2>
+          <div><label className="label" htmlFor="u-name">Name</label><input id="u-name" className="input" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} placeholder="For example: Ravi Kumar" /></div>
+          <div><label className="label" htmlFor="u-login">Email or username *</label><input id="u-login" required className="input" value={form.login} onChange={(e) => setForm({ ...form, login: e.target.value })} placeholder="ravi@instantmechanic.com or ravi.k" autoComplete="off" /></div>
+          <div><label className="label" htmlFor="u-pw">Password * (at least 8 characters)</label><input id="u-pw" type="password" required minLength={8} className="input" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} autoComplete="new-password" /></div>
+          <div><span className="label">Role</span><div className="flex gap-2">{[["agent", "Agent"], ["admin", "Admin"]].map(([k, l]) => <button type="button" key={k} aria-pressed={form.role === k} className={`pill ${form.role === k ? "pill-on" : ""}`} onClick={() => setForm({ ...form, role: k })}>{l}</button>)}</div>
+            <p className="muted mt-1">{form.role === "admin" ? "Admin can add, edit and remove mechanics, users and data." : "Agent can view the map, mechanics, groups and training. Cannot change data."}</p></div>
+          <button className="btn btn-primary self-start">Add login</button>
+        </form>
+      </div>
     </div>
   );
 }
@@ -206,7 +236,7 @@ export default function Manage() {
   return (
     <Shell title="Manage" wide>
       <div className="flex gap-2 flex-wrap">{TABS.map(([k, label]) => <button key={k} className={`pill ${tab === k ? "pill-on" : ""}`} onClick={() => setTab(k)}>{label}</button>)}<Link className="btn btn-primary text-sm ml-auto" href="/mechanic/edit/">Add mechanic</Link></div>
-      {ready && tab === "review" && <Review />}{tab === "sync" && <SiteSync />}{tab === "import" && <Import />}{tab === "zones" && <ZonesTab />}{tab === "removed" && <Removed />}{tab === "quiz" && <QuizScores />}{tab === "history" && <History />}{tab === "logins" && <Logins />}
+      {ready && tab === "review" && <Review />}{tab === "sync" && <SiteSync />}{tab === "import" && <Import />}{tab === "zones" && <ZonesTab />}{tab === "removed" && <Removed />}{tab === "quiz" && <QuizScores />}{tab === "history" && <History />}{tab === "users" && <Users />}
     </Shell>
   );
 }

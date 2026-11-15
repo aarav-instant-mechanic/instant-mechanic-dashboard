@@ -5,7 +5,7 @@ import time
 from fastapi import APIRouter, Body, Depends, HTTPException, Request
 from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
-from ..common import log, mechanic_json, zone_json
+from ..common import log, mechanic_json, suggested_group_name, zone_json
 from ..db import get_db
 from ..geo import coords_from_maps_link
 from ..models import Mechanic, User, WhatsAppGroup, Zone
@@ -35,27 +35,12 @@ def login(request: Request, data: dict = Body(...), db: Session = Depends(get_db
         _failed[who] = recent + [time.time()]
         raise HTTPException(401, "Wrong email or password.")
     _failed.pop(who, None)
-    return {"token": make_token(user), "role": user.role, "email": user.email}
+    return {"token": make_token(user), "role": user.role, "email": user.email, "name": user.name or ""}
 
 
 @router.get("/me")
 def me(user: User = Depends(current_user)):
-    return {"email": user.email, "role": user.role}
-
-
-@router.post("/auth/password")
-def change_password(data: dict = Body(...), admin: User = Depends(admin_user), db: Session = Depends(get_db)):
-    """Admin changes the password of the Admin or the shared Agent login."""
-    role, new = data.get("role"), str(data.get("password", ""))
-    if role not in ("admin", "agent") or len(new) < 8:
-        raise HTTPException(400, "Choose the login and a password of at least 8 characters.")
-    target = db.query(User).filter(User.role == role).first()
-    if not target:
-        raise HTTPException(404, f"There is no {role} login yet.")
-    target.password_hash = hash_password(new)
-    log(db, admin.email, "password_changed", "login", role)
-    db.commit()
-    return {"ok": True}
+    return {"email": user.email, "role": user.role, "name": user.name or ""}
 
 
 # ---------- zones ----------
@@ -337,3 +322,31 @@ def delete_group(gid: int, admin: User = Depends(admin_user), db: Session = Depe
     db.delete(g)
     db.commit()
     return {"ok": True}
+
+
+@router.post("/groups/auto")
+def auto_groups(commit: bool = False, only: int | None = None, admin: User = Depends(admin_user), db: Session = Depends(get_db)):
+    """Gives every active mechanic who has no WhatsApp group a group named IM<>NAME_AREA, and links him to it.
+    A group with that exact name that already exists is reused. Preview first; nothing is saved without commit."""
+    groups = {g.name.lower(): g for g in db.query(WhatsAppGroup)}
+    q = db.query(Mechanic).filter(Mechanic.active.is_(True), ~Mechanic.groups.any())
+    if only:
+        q = db.query(Mechanic).filter(Mechanic.id == only)
+    plan = []
+    for m in q.order_by(Mechanic.id):
+        name = suggested_group_name(m)
+        existing = groups.get(name.lower())
+        plan.append({"mechanic_id": m.id, "mechanic": m.name, "zone": m.zone.code if m.zone else "", "group": name,
+                     "existing_group": bool(existing)})
+        if commit:
+            if not existing:
+                existing = WhatsAppGroup(name=name, city=m.zone.city if m.zone else "")
+                db.add(existing)
+                groups[name.lower()] = existing
+            if existing not in m.groups:
+                m.groups.append(existing)
+            m.updated_by = admin.email
+    if commit and plan:
+        log(db, admin.email, "created", "whatsapp_group", f"{len(plan)} IM<> groups linked")
+        db.commit()
+    return {"committed": commit, "count": len(plan), "plan": plan}

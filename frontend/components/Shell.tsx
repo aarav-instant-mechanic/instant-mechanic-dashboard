@@ -67,7 +67,10 @@ export default function Shell({ title, children, wide }: { title: string; childr
             <input id="global-search" className="input !rounded-full !bg-canvas" value={q} onChange={(e) => setQ(e.target.value)}
               placeholder="Search name, Maps name, group, phone, zone" aria-label="Search mechanics" />
           </form>
-          <span className={`chip ${me.role === "admin" ? "chip-warn" : ""}`}>{me.role === "admin" ? "Admin" : "Agent"}</span>
+          <Link href="/account/" className="flex items-center gap-2 rounded-xl px-2 py-1 hover:bg-canvas" title="My account">
+            <span className="hidden sm:inline text-sm font-semibold max-w-[140px] truncate">{me.name || me.email}</span>
+            <span className={`chip ${me.role === "admin" ? "chip-warn" : ""}`}>{me.role === "admin" ? "Admin" : "Agent"}</span>
+          </Link>
           <button className="btn text-sm" onClick={signOut}>Sign out</button>
         </header>
         <main className="flex-1 overflow-auto p-4 md:p-6">

@@ -23,11 +23,11 @@ export default function Login() {
         </div>
         <div className="p-6 flex flex-col gap-4">
           <h1 className="!text-xl">Sign in</h1>
-          <div><label className="label" htmlFor="email">Email</label><input id="email" type="email" required autoComplete="username" className="input" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
+          <div><label className="label" htmlFor="email">Email or username</label><input id="email" type="text" required autoComplete="username" className="input" value={email} onChange={(e) => setEmail(e.target.value)} /></div>
           <div><label className="label" htmlFor="password">Password</label><input id="password" type="password" required autoComplete="current-password" className="input" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
           <ErrorBox text={error} />
           <button className="btn btn-primary" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
-          <p className="muted">Agents use the shared team login. The Admin login is for adding and changing data.</p>
+          <p className="muted">Use the login your Admin gave you. Forgot your password? Ask your Admin to reset it.</p>
         </div>
       </form>
     </div>

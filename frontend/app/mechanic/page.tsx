@@ -23,6 +23,18 @@ export default function Profile() {
   if (loading || !id) return <Shell title="Mechanic"><Skeleton rows={6} /></Shell>;
   if (!m) return <Shell title="Mechanic"><ErrorBox text={error || "Mechanic not found."} /></Shell>;
   const pos = m.position;
+  const mapsUrl = m.gmaps_link || (["exact", "live", "last_seen"].includes(pos.kind) ? `https://www.google.com/maps?q=${pos.lat},${pos.lng}` : "");
+  const summary = [
+    m.groups[0]?.name || m.suggested_group,
+    `Name: ${m.name} (${m.code})`,
+    `Phone: ${m.phone || "not added"}${m.alt_phone ? `, ${m.alt_phone}` : ""}`,
+    `Zone: ${m.zone} ${m.zone_name}, ${m.region}`,
+    m.locality && `Area: ${m.locality}`,
+    m.coverage_areas && `Also covers: ${m.coverage_areas}`,
+    `Google Maps name: ${m.gmaps_name || "not added"}`,
+    `Hours: ${m.working_hours || "not added"}${m.service_type ? ` · ${m.service_type}` : ""}`,
+    mapsUrl && `Location: ${mapsUrl}${pos.kind === "approximate" ? "" : pos.kind === "exact" ? "" : " (last shared)"}`,
+  ].filter(Boolean).join("\n");
   const shareUrl = typeof window !== "undefined" ? `${window.location.origin}/share/?t=${m.track_token}` : "";
 
   return (
@@ -43,8 +55,20 @@ export default function Profile() {
         <div className="grid gap-3 md:grid-cols-3">
           <div className="rounded-xl border border-line p-3"><div className="muted">Real name</div><div className="font-bold text-lg">{m.name}</div>{m.under_tx && <div className="text-sm">Under TX: {m.under_tx}</div>}</div>
           <div className="rounded-xl border border-line p-3"><div className="muted">Name on Google Maps</div><div className="font-bold text-lg"><Blank v={m.gmaps_name} /></div></div>
-          <div className="rounded-xl border border-line p-3"><div className="muted">WhatsApp group</div><div className="font-bold text-lg"><Blank v={m.groups.map((g: any) => g.name).join(", ")} /></div></div>
+          <div className="rounded-xl border border-line p-3"><div className="muted">WhatsApp group</div>
+            {m.groups.length > 0
+              ? <div className="font-bold text-lg break-words">{m.groups.map((g: any) => <div key={g.id}><Link className="hover:text-brand-deep" href={`/groups/?id=${g.id}`}>{g.name}</Link>{!g.link && admin && <Link className="chip ml-1 align-middle" href={`/groups/?id=${g.id}`}>add invite link</Link>}</div>)}</div>
+              : <><div className="font-bold text-lg text-muted italic">Not added yet</div>
+                  <div className="text-sm mt-1">Expected name: <code className="font-semibold">{m.suggested_group}</code></div>
+                  {admin && <button className="btn btn-primary text-sm mt-2" onClick={() => act(() => api(`/groups/auto?commit=true&only=${m.id}`, { method: "POST" }), `Group ${m.suggested_group} created and linked. Add its invite link on the WhatsApp Groups page.`)}>Create and link this group</button>}</>}
+          </div>
         </div>
+      </div>
+
+      <div className="card flex flex-col gap-2">
+        <div className="flex justify-between gap-2 flex-wrap items-center"><h2>Summary</h2><button className="btn btn-primary text-sm" onClick={() => copy(summary)}>Copy summary</button></div>
+        <p className="muted">Ready to paste into WhatsApp or a note.</p>
+        <pre className="rounded-xl bg-canvas border border-line p-3 text-sm whitespace-pre-wrap font-sans">{summary}</pre>
       </div>
 
       <div className="grid gap-5 md:grid-cols-2">

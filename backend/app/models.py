@@ -21,6 +21,7 @@ class User(Base):
     email: Mapped[str] = mapped_column(String(200), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(200))
     role: Mapped[str] = mapped_column(String(20))  # "admin" or "agent"
+    name: Mapped[str] = mapped_column(String(120), default="")   # shown in the dashboard; email is the login
 
 
 class Zone(Base):

@@ -160,7 +160,10 @@ def test_everything():
         # change history records who did what; admin can change the agent password
         actions = [a["action"] for a in c.get("/audit", headers=admin).json()]
         assert {"created", "updated", "deactivated", "restored", "imported", "sharing_on"} <= set(actions)
-        assert c.post("/auth/password", json={"role": "agent", "password": "new-agent-pass"}, headers=admin).status_code == 200
+        users = c.get("/users", headers=admin).json()
+        agent_id = next(u["id"] for u in users if u["role"] == "agent")
+        assert c.put(f"/users/{agent_id}", json={"password": "new-agent-pass"}, headers=admin).status_code == 200
+        assert c.get("/me", headers=agent).status_code == 401          # old session ends after a password reset
         assert c.post("/auth/login", json={"email": "agents@test.local", "password": "new-agent-pass"}).status_code == 200
 
 
@@ -221,3 +224,45 @@ def test_site_sync(monkeypatch):
         assert c.post("/sync", headers=admin).json()["counts"]["deactivate"] == 1
         c.post("/sync?commit=true", headers=admin)
         assert len(c.get("/mechanics", headers=admin).json()) == before
+
+
+def test_users_and_groups():
+    with TestClient(app) as c:
+        admin = {"Authorization": "Bearer " + c.post("/auth/login", json={"email": "admin@test.local", "password": "admin-pass-1"}).json()["token"]}
+        # add a second agent with a username, and a second admin
+        r = c.post("/users", json={"login": "Ravi.Agent", "name": "Ravi", "password": "ravi-pass-1", "role": "agent"}, headers=admin)
+        assert r.status_code == 200 and r.json()["login"] == "ravi.agent"
+        assert c.post("/users", json={"login": "ravi.agent", "password": "another-1", "role": "agent"}, headers=admin).status_code == 400
+        assert c.post("/users", json={"login": "has space", "password": "another-1", "role": "agent"}, headers=admin).status_code == 400
+        assert c.post("/users", json={"login": "x2@test.local", "password": "short", "role": "agent"}, headers=admin).status_code == 400
+        boss = c.post("/users", json={"login": "boss@test.local", "name": "Boss", "password": "boss-pass-1", "role": "admin"}, headers=admin).json()
+        ravi = {"Authorization": "Bearer " + c.post("/auth/login", json={"email": "ravi.agent", "password": "ravi-pass-1"}).json()["token"]}
+        assert c.get("/me", headers=ravi).json() == {"email": "ravi.agent", "role": "agent", "name": "Ravi"}
+        assert c.get("/users", headers=ravi).status_code == 403
+        assert c.post("/users", json={"login": "hack", "password": "hack-pass-1", "role": "admin"}, headers=ravi).status_code == 403
+        # own password change
+        assert c.post("/me/password", json={"current": "wrong", "new": "ravi-pass-2"}, headers=ravi).status_code == 400
+        assert c.post("/me/password", json={"current": "ravi-pass-1", "new": "ravi-pass-2"}, headers=ravi).status_code == 200
+        assert c.post("/auth/login", json={"email": "ravi.agent", "password": "ravi-pass-2"}).status_code == 200
+        # cannot remove yourself or the last admin
+        users = c.get("/users", headers=admin).json()
+        me = next(u for u in users if u["is_me"])
+        assert c.delete(f"/users/{me['id']}", headers=admin).status_code == 400
+        assert c.delete(f"/users/{boss['id']}", headers=admin).status_code == 200
+        assert c.put(f"/users/{me['id']}", json={"role": "agent"}, headers=admin).status_code == 400
+        rid = next(u["id"] for u in users if u["login"] == "ravi.agent")
+        assert c.delete(f"/users/{rid}", headers=admin).status_code == 200
+        assert c.get("/me", headers=ravi).status_code == 401
+
+        # WhatsApp group names IM<>NAME_AREA, created in bulk for mechanics with no group
+        new = c.post("/mechanics", json={"name": "Mazid Ji South Delhi 9811111111", "zone": "SD-3"}, headers=admin).json()["mechanic"]
+        assert new["suggested_group"] == "IM<>MAZID_SOUTH DELHI"
+        prev = c.post("/groups/auto", headers=admin).json()
+        assert prev["committed"] is False and any(p["group"] == "IM<>MAZID_SOUTH DELHI" for p in prev["plan"])
+        before = len(c.get("/groups", headers=admin).json())
+        assert len(c.get("/groups", headers=admin).json()) == before
+        done = c.post("/groups/auto?commit=true", headers=admin).json()
+        assert done["count"] == prev["count"]
+        got = c.get(f"/mechanics/{new['id']}", headers=admin).json()
+        assert [g["name"] for g in got["groups"]] == ["IM<>MAZID_SOUTH DELHI"]
+        assert c.post("/groups/auto", headers=admin).json()["count"] == 0     # everyone has a group now

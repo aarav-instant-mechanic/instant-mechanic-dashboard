@@ -100,7 +100,7 @@ def seed_logins(db: Session) -> list[str]:
         if not email or not password:
             continue
         if not db.query(User).filter(User.email == email).first():
-            db.add(User(email=email, password_hash=hash_password(password), role=role))
+            db.add(User(email=email, password_hash=hash_password(password), role=role, name=role.title()))
             made.append(f"{role}: {email}")
     db.commit()
     return made

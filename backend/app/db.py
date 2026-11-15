@@ -34,7 +34,8 @@ def get_db():
 
 # Columns added after the first version. Existing databases get them here, without losing any data.
 NEW_COLUMNS = {"mechanics": {"external_id": "VARCHAR(40) DEFAULT ''", "photo_url": "VARCHAR(500) DEFAULT ''",
-                             "live_place": "VARCHAR(300) DEFAULT ''"}}
+                             "live_place": "VARCHAR(300) DEFAULT ''"},
+               "users": {"name": "VARCHAR(120) DEFAULT ''"}}
 
 
 def ensure_columns(bind=None):

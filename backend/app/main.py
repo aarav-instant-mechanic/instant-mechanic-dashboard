@@ -14,7 +14,7 @@ from fastapi import FastAPI  # noqa: E402
 from fastapi.middleware.cors import CORSMiddleware  # noqa: E402
 from .db import Base, SessionLocal, engine, ensure_columns  # noqa: E402
 from . import models  # noqa: E402,F401
-from .routers import core, gps, manage, sync, training  # noqa: E402
+from .routers import core, gps, manage, sync, training, users  # noqa: E402
 from .seed import seed_logins, seed_zones  # noqa: E402
 
 
@@ -34,7 +34,7 @@ app = FastAPI(title="Instant Mechanic Training Dashboard API", lifespan=lifespan
 origins = [o.strip().rstrip("/") for o in os.getenv("FRONTEND_URL", "http://localhost:3000").split(",") if o.strip()]
 app.add_middleware(CORSMiddleware, allow_origins=origins, allow_methods=["*"], allow_headers=["*"])
 
-for r in (core.router, manage.router, training.router, gps.router, sync.router):
+for r in (core.router, manage.router, training.router, gps.router, sync.router, users.router):
     app.include_router(r)
 
 

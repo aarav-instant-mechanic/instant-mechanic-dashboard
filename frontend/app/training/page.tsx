@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import Shell from "@/components/Shell";
 import { Blank, Empty, ErrorBox, Skeleton, useLoad } from "@/components/ui";
-import { CITIES, api } from "@/lib/api";
+import { CITIES, api, session } from "@/lib/api";
 
 function Quiz() {
   const [name, setName] = useState("");
@@ -15,7 +15,7 @@ function Quiz() {
   const [wrong, setWrong] = useState<any[]>([]);
   const [err, setErr] = useState("");
   const [saved, setSaved] = useState(false);
-  useEffect(() => { try { setName(localStorage.getItem("im-agent-name") || ""); } catch {} }, []);
+  useEffect(() => { try { setName(localStorage.getItem("im-agent-name") || session()?.name || ""); } catch {} }, []);
 
   const start = async (e: any) => {
     e.preventDefault(); setErr("");

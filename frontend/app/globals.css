@@ -26,6 +26,10 @@ h1 { @apply text-[28px]; } h2 { @apply text-xl; } h3 { @apply text-base; }
   .muted { @apply text-muted text-sm; }
 }
 
+/* entrance animation: elements rest fully visible; the animation only plays on top of that */
+@keyframes rise { from { opacity: 0; transform: translateY(14px) scale(.985); } to { opacity: 1; transform: none; } }
+.rise { animation: rise .6s cubic-bezier(.2,.8,.2,1) both; }
+
 .leaflet-container { font-family: inherit; border-radius: 14px; z-index: 0; }
 .leaflet-tooltip.zone-label { background: #202124; color: #fff; border: 0; border-radius: 6px; padding: 0 5px; font-weight: 700; font-size: 11px; line-height: 16px; box-shadow: none; }
 .leaflet-tooltip.zone-label::before { display: none; }

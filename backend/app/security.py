@@ -26,7 +26,8 @@ def check_password(p: str, h: str) -> bool:
 
 def make_token(user: User) -> str:
     exp = datetime.now(timezone.utc) + timedelta(hours=TOKEN_HOURS)
-    return jwt.encode({"sub": user.email, "role": user.role, "exp": exp}, SECRET_KEY, algorithm="HS256")
+    return jwt.encode({"sub": user.email, "role": user.role, "v": user.password_hash[-10:], "exp": exp},
+                      SECRET_KEY, algorithm="HS256")
 
 
 def current_user(authorization: str = Header(default=""), db: Session = Depends(get_db)) -> User:
@@ -39,6 +40,8 @@ def current_user(authorization: str = Header(default=""), db: Session = Depends(
     user = db.query(User).filter(User.email == data.get("sub")).first()
     if not user:
         raise HTTPException(401, "This login no longer exists.")
+    if data.get("v") != user.password_hash[-10:]:
+        raise HTTPException(401, "Your password was changed. Please sign in again.")
     return user
 
 
