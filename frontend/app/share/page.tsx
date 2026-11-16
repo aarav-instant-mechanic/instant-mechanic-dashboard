@@ -37,7 +37,7 @@ export default function Share() {
   return (
     <div className="min-h-full grid place-items-center p-4">
       <div className="card w-full max-w-sm !p-0 overflow-hidden text-center">
-        <div className="bg-gradient-to-br from-brand-yellow to-brand-orange p-5 font-display font-bold text-xl tracking-wide">INSTANT MECHANIC</div>
+        <div className="bg-white border-b-4 border-brand-orange p-5"><img src="/logo.png" alt="Instant Mechanic" className="h-14 w-auto block" /></div>
         <div className="p-6 flex flex-col gap-4">
           {info && <h1 className="!text-xl">Hello {info.name}</h1>}
           {err && <div role="alert" className="rounded-xl border border-red-200 bg-red-50 text-alert p-3">{err}</div>}

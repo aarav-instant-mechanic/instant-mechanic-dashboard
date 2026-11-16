@@ -41,9 +41,9 @@ export default function Shell({ title, children, wide }: { title: string; childr
   return (
     <div className="md:flex h-full">
       <aside className={`no-print bg-white border-r border-line flex-none flex flex-col ${small ? "md:w-[68px]" : "md:w-60"} ${open ? "" : "hidden md:flex"}`}>
-        <div className="bg-gradient-to-br from-brand-yellow to-brand-orange px-4 py-4 flex items-center gap-3">
-          <img src="/icon.svg" alt="" width={36} height={36} className="rounded-lg bg-ink/5" />
-          {!small && <div><div className="font-display font-bold tracking-wide text-lg leading-none">INSTANT MECHANIC</div><div className="text-xs font-semibold">Training dashboard</div></div>}
+        <div className="bg-white border-b border-line px-4 py-3 flex items-center gap-3">
+          {small && <img src="/favicon.png" alt="Instant Mechanic" className="h-10 w-10 flex-none" />}
+          {!small && <div><img src="/logo.png" alt="Instant Mechanic" className="h-12 w-auto block" /><div className="text-xs font-semibold text-brand-deep mt-1">Training dashboard</div></div>}
         </div>
         <nav className="p-2 flex-1 overflow-auto" aria-label="Main">
           {items.map((n) => {

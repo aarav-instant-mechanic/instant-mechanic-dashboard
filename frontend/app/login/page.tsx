@@ -17,9 +17,9 @@ export default function Login() {
   return (
     <div className="min-h-full grid place-items-center p-4">
       <form onSubmit={submit} className="card w-full max-w-sm !p-0 overflow-hidden">
-        <div className="bg-gradient-to-br from-brand-yellow to-brand-orange p-6 flex items-center gap-3">
-          <img src="/icon.svg" alt="" width={44} height={44} />
-          <div><div className="font-display font-bold text-xl tracking-wide leading-none">INSTANT MECHANIC</div><div className="text-sm font-semibold">Training dashboard</div></div>
+        <div className="bg-white border-b-4 border-brand-orange p-6 flex items-center gap-3">
+          {null}
+          <div><img src="/logo.png" alt="Instant Mechanic" className="h-16 w-auto block" /><div className="text-sm font-semibold text-brand-deep mt-1">Training dashboard</div></div>
         </div>
         <div className="p-6 flex flex-col gap-4">
           <h1 className="!text-xl">Sign in</h1>

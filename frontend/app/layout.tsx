@@ -1,6 +1,6 @@
 import "./globals.css";
 
-export const metadata = { title: "Instant Mechanic Training Dashboard", description: "Mechanic network map, directory and training" };
+export const metadata = { title: "Instant Mechanic Training Dashboard", description: "Mechanic network map, directory and training", icons: { icon: "/favicon.png", apple: "/favicon.png" } };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
